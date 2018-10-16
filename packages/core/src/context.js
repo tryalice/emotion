@@ -3,26 +3,26 @@ import { isBrowser, type EmotionCache } from '@emotion/utils'
 import * as React from 'react'
 import createCache from '@emotion/cache'
 
-let EmotionCacheContext = React.createContext(isBrowser ? createCache() : null)
+export let CacheContext = React.createContext(isBrowser ? createCache() : null)
 
 export let ThemeContext = React.createContext<Object>({})
 export let CacheProvider: React.ComponentType<{ value: EmotionCache }> =
   // $FlowFixMe
-  EmotionCacheContext.Provider
+  CacheContext.Provider
 
 let withEmotionCache = function withEmotionCache<Props, Ref: React.Ref<*>>(
   func: (props: Props, cache: EmotionCache, ref: Ref) => React.Node
 ): React.StatelessFunctionalComponent<Props> {
   let render = (props: Props, ref: Ref) => {
     return (
-      <EmotionCacheContext.Consumer>
+      <CacheContext.Consumer>
         {(
           // $FlowFixMe we know it won't be null
           cache: EmotionCache
         ) => {
           return func(props, cache, ref)
         }}
-      </EmotionCacheContext.Consumer>
+      </CacheContext.Consumer>
     )
   }
   // $FlowFixMe
@@ -31,12 +31,12 @@ let withEmotionCache = function withEmotionCache<Props, Ref: React.Ref<*>>(
 
 let consume = (func: EmotionCache => React.Node) => {
   return (
-    <EmotionCacheContext.Consumer>
+    <CacheContext.Consumer>
       {
         // $FlowFixMe we know it won't be null
         func
       }
-    </EmotionCacheContext.Consumer>
+    </CacheContext.Consumer>
   )
 }
 
@@ -48,9 +48,9 @@ if (!isBrowser) {
     state = { value: createCache() }
     render() {
       return (
-        <EmotionCacheContext.Provider {...this.state}>
+        <CacheContext.Provider {...this.state}>
           {this.props.children(this.state.value)}
-        </EmotionCacheContext.Provider>
+        </CacheContext.Provider>
       )
     }
   }
@@ -59,7 +59,7 @@ if (!isBrowser) {
     func: (props: Props, cache: EmotionCache) => React.Node
   ): React.StatelessFunctionalComponent<Props> {
     return (props: Props) => (
-      <EmotionCacheContext.Consumer>
+      <CacheContext.Consumer>
         {context => {
           if (context === null) {
             return (
@@ -73,12 +73,12 @@ if (!isBrowser) {
             return func(props, context)
           }
         }}
-      </EmotionCacheContext.Consumer>
+      </CacheContext.Consumer>
     )
   }
   consume = (func: EmotionCache => React.Node) => {
     return (
-      <EmotionCacheContext.Consumer>
+      <CacheContext.Consumer>
         {context => {
           if (context === null) {
             return (
@@ -92,7 +92,7 @@ if (!isBrowser) {
             return func(context)
           }
         }}
-      </EmotionCacheContext.Consumer>
+      </CacheContext.Consumer>
     )
   }
 }
