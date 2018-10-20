@@ -32,8 +32,10 @@ let createCache = (options?: Options): EmotionCache => {
   }
 
   let stylis = new Stylis(stylisOptions)
+  let serverStylis = new Stylis(stylisOptions)
 
   stylis.use(options.stylisPlugins)(ruleSheetPlugin)
+  serverStylis.use(options.stylisPlugins)
 
   if (process.env.NODE_ENV !== 'production') {
     // $FlowFixMe
@@ -95,7 +97,8 @@ let createCache = (options?: Options): EmotionCache => {
     }),
     nonce: options.nonce,
     inserted,
-    registered: {}
+    registered: {},
+    serverStylis
   }
   return cache
 }

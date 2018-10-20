@@ -12,6 +12,7 @@ interface StyleSheet {
 
 export type EmotionCache = {
   stylis: (string, string) => Array<string>,
+  serverStylis: (string, string) => string,
   inserted: { [string]: string | true },
   registered: RegisteredCache,
   sheet: StyleSheet,
