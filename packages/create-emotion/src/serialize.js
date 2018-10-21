@@ -1,5 +1,9 @@
 // @flow
-import type { Interpolation, SerializedStyles } from '@emotion/utils'
+import type {
+  Interpolation,
+  SerializedStyles,
+  RegisteredCache
+} from '@emotion/utils'
 import hashString from '@emotion/hash'
 import unitless from '@emotion/unitless'
 import memoize from '@emotion/memoize'
@@ -75,9 +79,13 @@ if (process.env.NODE_ENV !== 'production') {
   }
 }
 
+let shouldWarnAboutInterpolatingClassNameFromCss = true
+
 function handleInterpolation(
   mergedProps: void | Object,
-  interpolation: Interpolation
+  registered: RegisteredCache,
+  interpolation: Interpolation,
+  couldBeSelectorInterpolation: boolean
 ): string | number {
   if (interpolation == null) {
     return ''
@@ -125,11 +133,16 @@ function handleInterpolation(
         return interpolation.styles
       }
 
-      return createStringFromObject(mergedProps, interpolation)
+      return createStringFromObject(mergedProps, registered, interpolation)
     }
     case 'function': {
       if (mergedProps !== undefined) {
-        return handleInterpolation(mergedProps, interpolation(mergedProps))
+        return handleInterpolation(
+          mergedProps,
+          registered,
+          interpolation(mergedProps),
+          couldBeSelectorInterpolation
+        )
       } else if (process.env.NODE_ENV !== 'production') {
         console.error(
           'Functions that are interpolated in css calls will be stringified.\n' +
@@ -142,26 +155,46 @@ function handleInterpolation(
     }
     // eslint-disable-next-line no-fallthrough
     default: {
-      return interpolation
+      const cached = registered[interpolation]
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        couldBeSelectorInterpolation &&
+        shouldWarnAboutInterpolatingClassNameFromCss &&
+        cached !== undefined
+      ) {
+        console.error(
+          'Interpolating a className from css`` is not recommended and will cause problems with composition.\n' +
+            'Interpolating a className from css`` will be completely unsupported in the next major version of Emotion'
+        )
+        shouldWarnAboutInterpolatingClassNameFromCss = false
+      }
+      return cached !== undefined && !couldBeSelectorInterpolation
+        ? cached
+        : interpolation
     }
   }
 }
 
 function createStringFromObject(
   mergedProps: void | Object,
+  registered: RegisteredCache,
   obj: { [key: string]: Interpolation }
 ): string {
   let string = ''
 
   if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++) {
-      string += handleInterpolation(mergedProps, obj[i])
+      string += handleInterpolation(mergedProps, registered, obj[i], false)
     }
   } else {
     for (let key in obj) {
       let value = obj[key]
       if (typeof value !== 'object') {
-        string += `${processStyleName(key)}:${processStyleValue(key, value)};`
+        if (registered[value] !== undefined) {
+          string += `${key}{${registered[value]}}`
+        } else {
+          string += `${processStyleName(key)}:${processStyleValue(key, value)};`
+        }
       } else {
         if (
           key === 'NO_COMPONENT_SELECTOR' &&
@@ -171,7 +204,10 @@ function createStringFromObject(
             'Component selectors can only be used in conjunction with babel-plugin-emotion.'
           )
         }
-        if (Array.isArray(value) && typeof value[0] === 'string') {
+        if (
+          Array.isArray(value) &&
+          (typeof value[0] === 'string' && registered[value[0]] === undefined)
+        ) {
           for (let i = 0; i < value.length; i++) {
             string += `${processStyleName(key)}:${processStyleValue(
               key,
@@ -179,7 +215,12 @@ function createStringFromObject(
             )};`
           }
         } else {
-          string += `${key}{${handleInterpolation(mergedProps, value)}}`
+          string += `${key}{${handleInterpolation(
+            mergedProps,
+            registered,
+            value,
+            false
+          )}}`
         }
       }
     }
@@ -205,6 +246,7 @@ if (process.env.NODE_ENV !== 'production') {
 let cursor
 
 export const serializeStyles = function(
+  registered: RegisteredCache,
   args: Array<Interpolation>,
   mergedProps: void | Object
 ): SerializedStyles {
@@ -226,7 +268,12 @@ export const serializeStyles = function(
     // we have to store this in a variable and then append it to styles since
     // styles could be modified in handleInterpolation and using += would mean
     // it would append the return value of handleInterpolation to the value before handleInterpolation is called
-    let stringifiedInterpolation = handleInterpolation(mergedProps, strings)
+    let stringifiedInterpolation = handleInterpolation(
+      mergedProps,
+      registered,
+      strings,
+      false
+    )
     styles += stringifiedInterpolation
   } else {
     styles += strings[0]
@@ -236,7 +283,12 @@ export const serializeStyles = function(
     // we have to store this in a variable and then append it to styles since
     // styles could be modified in handleInterpolation and using += would mean
     // it would append the return value of handleInterpolation to the value before handleInterpolation is called
-    let stringifiedInterpolation = handleInterpolation(mergedProps, args[i])
+    let stringifiedInterpolation = handleInterpolation(
+      mergedProps,
+      registered,
+      args[i],
+      styles.charCodeAt(styles.length - 1) === 46
+    )
     styles += stringifiedInterpolation
     if (stringMode) {
       styles += strings[i]

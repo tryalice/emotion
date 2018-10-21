@@ -21,7 +21,7 @@ let render = (cache, props, theme: null | Object, ref) => {
     )
   }
   registeredStyles.push(theme === null ? props.css : props.css(theme))
-  const serialized = serializeStyles(cache.registered, registeredStyles)
+  const serialized = serializeStyles(registeredStyles)
   const rules = insertStyles(cache, serialized, typeof type === 'string')
   className += `${cache.key}-${serialized.name}`
 
