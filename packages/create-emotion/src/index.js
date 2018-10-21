@@ -1,6 +1,5 @@
-// @flow
 import createCache from '@emotion/cache'
-import { serializeStyles } from './serialize'
+import { serializeStyles } from '@emotion/serialize'
 import {
   insertStyles,
   isBrowser,
