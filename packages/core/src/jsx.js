@@ -73,7 +73,7 @@ let Emotion = withEmotionCache((props, cache, ref) => {
 
           return () => dynamicSheet.flush()
         },
-        [dynamicSheet]
+        [serialized.name, dynamicSheet, type]
       )
     } else {
       insertStyles(cache, serialized, typeof type === 'string')
