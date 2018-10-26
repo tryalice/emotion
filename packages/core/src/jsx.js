@@ -3,15 +3,33 @@ import * as React from 'react'
 import { withEmotionCache, ThemeContext, useContext } from './context'
 import { getRegisteredStyles, insertStyles, isBrowser } from '@emotion/utils'
 import { serializeStyles } from '@emotion/serialize'
+import { StyleSheet } from '@emotion/sheet'
 
 let typePropName = '__EMOTION_TYPE_PLEASE_DO_NOT_USE__'
 
 let hasOwnProperty = Object.prototype.hasOwnProperty
 
+let useState: <State>(
+  initalState: State
+) => [State, (State) => void] = (React: any).useState
+
+let useRef: <Value>(initalValue: Value) => {| current: Value |} = (React: any)
+  .useRef
+
+let useMemo: <Value>(() => Value, Array<any>) => Value = (React: any).useMemo
+
+let useMutationEffect: (() => mixed, mem?: Array<any>) => void = (React: any)
+  .useMutationEffect
+
+const LRU_SIZE = 20
+
 let Emotion = withEmotionCache((props, cache, ref) => {
   let type = props[typePropName]
   let className = ''
   let registeredStyles = []
+  let sizeRef = useRef(0)
+  let [isDynamic, setDynamic] = useState(false)
+  let { current: localCache } = useRef({})
   if (props.className !== undefined) {
     className = getRegisteredStyles(
       cache.registered,
@@ -24,7 +42,44 @@ let Emotion = withEmotionCache((props, cache, ref) => {
     typeof cssProp === 'function' ? cssProp(useContext(ThemeContext)) : cssProp
   )
   const serialized = serializeStyles(cache.registered, registeredStyles)
-  const rules = insertStyles(cache, serialized, typeof type === 'string')
+  if (localCache[serialized.name] === undefined) {
+    localCache[serialized.name] = true
+    sizeRef.current++
+  }
+  if (sizeRef.current > LRU_SIZE && isDynamic === false) {
+    setDynamic(true)
+  }
+  if (isBrowser) {
+    if (isDynamic) {
+      let dynamicSheet = useMemo(
+        () => {
+          return new StyleSheet({
+            key: `${cache.key}-dynamic`,
+            nonce: cache.sheet.nonce,
+            container: cache.sheet.container
+          })
+        },
+        [cache]
+      )
+      useMutationEffect(
+        () => {
+          insertStyles(
+            cache,
+            serialized,
+            typeof type === 'string',
+            dynamicSheet,
+            false
+          )
+
+          return () => dynamicSheet.flush()
+        },
+        [dynamicSheet]
+      )
+    } else {
+      insertStyles(cache, serialized, typeof type === 'string')
+    }
+  }
+
   className += `${cache.key}-${serialized.name}`
 
   const newProps = {}
@@ -41,7 +96,11 @@ let Emotion = withEmotionCache((props, cache, ref) => {
   newProps.className = className
 
   const ele = React.createElement(type, newProps)
-  if (!isBrowser && rules !== undefined) {
+  if (!isBrowser) {
+    const rules = insertStyles(cache, serialized, typeof type === 'string')
+    if (rules === undefined) {
+      return ele
+    }
     let serializedNames = serialized.name
     let next = serialized.next
     while (next !== undefined) {
