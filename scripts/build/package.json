@@ -3,7 +3,7 @@
   "version": "9.2.6",
   "private": true,
   "dependencies": {
-    "chalk": "^2.3.2",
+    "chalk": "^2.4.1",
     "del": "^3.0.0",
     "rollup": "^0.63.4",
     "rollup-plugin-alias": "^1.4.0",
