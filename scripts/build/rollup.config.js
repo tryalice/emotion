@@ -20,12 +20,12 @@ const makeExternalPredicate = externalArr => {
 
 let unsafeRequire = require
 
-let pkgJsonsAllowedToFail = [
-  // the package.json can't be found for this package on ci so for now,
-  // we're just going to ignore it
-  // TODO: investigate why it fails
-  'nopt'
-]
+// let pkgJsonsAllowedToFail = [
+//   // the package.json can't be found for this package on ci so for now,
+//   // we're just going to ignore it
+//   // TODO: investigate why it fails
+//   'nopt'
+// ]
 
 function getChildPeerDeps(
   finalPeerDeps /*: Array<string> */,
@@ -39,8 +39,8 @@ function getChildPeerDeps(
       pkgJson = unsafeRequire(key + '/package.json')
     } catch (err) {
       if (
-        err.code === 'MODULE_NOT_FOUND' &&
-        pkgJsonsAllowedToFail.includes(key)
+        err.code === 'MODULE_NOT_FOUND' // &&
+        // pkgJsonsAllowedToFail.includes(key)
       ) {
         return
       }
