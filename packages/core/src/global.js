@@ -5,9 +5,10 @@ import {
   isBrowser,
   type EmotionCache,
   type SerializedStyles,
+  type Sheet,
   insertStyles
 } from '@emotion/utils'
-import { StyleSheet } from '@emotion/sheet'
+import { createSheet, flush } from '@emotion/sheet'
 import { serializeStyles } from '@emotion/serialize'
 
 type Styles = Object | Array<Object>
@@ -63,12 +64,12 @@ type InnerGlobalProps = {
 // initial client-side render from SSR, use place of hydrating tag
 
 class InnerGlobal extends React.Component<InnerGlobalProps> {
-  sheet: StyleSheet
+  sheet: Sheet
   componentDidMount() {
-    this.sheet = new StyleSheet({
+    this.sheet = createSheet({
       key: `${this.props.cache.key}-global`,
-      nonce: this.props.cache.sheet.nonce,
-      container: this.props.cache.sheet.container
+      nonce: this.props.cache.sheet.opts.nonce,
+      container: this.props.cache.sheet.opts.container
     })
     // $FlowFixMe
     let node: HTMLStyleElement | null = document.querySelector(
@@ -99,13 +100,13 @@ class InnerGlobal extends React.Component<InnerGlobalProps> {
       // if this doesn't exist then it will be null so the style element will be appended
       let element = this.sheet.tags[0].nextElementSibling
       this.sheet.before = ((element: any): Element | null)
-      this.sheet.flush()
+      flush(this.sheet)
     }
     this.props.cache.insert(``, this.props.serialized, this.sheet, false)
   }
 
   componentWillUnmount() {
-    this.sheet.flush()
+    flush(this.sheet)
   }
   render() {
     if (!isBrowser) {

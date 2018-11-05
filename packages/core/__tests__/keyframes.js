@@ -7,6 +7,7 @@ import cases from 'jest-in-case'
 import * as renderer from 'react-test-renderer'
 import createCache from '@emotion/cache'
 import { CacheProvider } from '@emotion/core'
+import { flush } from '@emotion/sheet'
 
 cases(
   'keyframes',
@@ -21,7 +22,7 @@ cases(
     expect(
       throwIfFalsy(cache.sheet.tags).map(tag => tag.textContent || '')
     ).toMatchSnapshot()
-    cache.sheet.flush()
+    flush(cache.sheet)
   },
   {
     basic: {

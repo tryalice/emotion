@@ -4,17 +4,19 @@
 // since we use stylis after closure compiler
 
 import type { StylisPlugin } from './types'
+import { insert } from '@emotion/sheet'
+import { type Sheet as SheetType } from '@emotion/utils'
 
 const delimiter = '/*|*/'
 const needle = delimiter + '}'
 
 function toSheet(block) {
   if (block) {
-    Sheet.current.insert(block + '}')
+    insert(Sheet.current, block + '}')
   }
 }
 
-export let Sheet: { current: { +insert: string => void } } = {
+export let Sheet: { current: SheetType } = {
   current: (null: any)
 }
 
@@ -36,7 +38,7 @@ export let ruleSheet: StylisPlugin = (
       switch (content.charCodeAt(0)) {
         case 64: {
           // @import
-          Sheet.current.insert(content + ';')
+          insert(Sheet.current, content + ';')
           return ''
         }
         // charcode for l

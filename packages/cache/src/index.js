@@ -1,5 +1,5 @@
 // @flow
-import { StyleSheet } from '@emotion/sheet'
+import { createSheet } from '@emotion/sheet'
 import {
   isBrowser,
   type EmotionCache,
@@ -199,11 +199,14 @@ let createCache = (options?: Options): EmotionCache => {
 
   const cache: EmotionCache = {
     key,
-    sheet: new StyleSheet({
+    sheet: createSheet({
       key,
       container,
       nonce: options.nonce,
-      speedy: options.speedy
+      speedy:
+        options.speedy === undefined
+          ? process.env.NODE_ENV === 'production'
+          : options.speedy
     }),
     nonce: options.nonce,
     inserted,

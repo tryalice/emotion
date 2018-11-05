@@ -71,7 +71,7 @@ let render = (cache, props, theme: null | Object, ref) => {
           {...{
             [`data-emotion-${cache.key}`]: serializedNames,
             dangerouslySetInnerHTML: { __html: rules },
-            nonce: cache.sheet.nonce
+            nonce: cache.sheet.opts.nonce
           }}
         />
         {ele}
