@@ -10,8 +10,6 @@ import memoize from '@emotion/memoize'
 
 let hyphenateRegex = /[A-Z]|^ms/g
 
-let animationRegex = /_EMO_([^_]+?)_([^]*?)_EMO_/g
-
 const processStyleName = memoize((styleName: string) =>
   styleName.replace(hyphenateRegex, '-$&').toLowerCase()
 )
@@ -22,22 +20,6 @@ let processStyleValue = (
 ): string | number => {
   if (value == null || typeof value === 'boolean') {
     return ''
-  }
-
-  switch (key) {
-    case 'animation':
-    case 'animationName': {
-      if (typeof value === 'string') {
-        value = value.replace(animationRegex, (match, p1, p2) => {
-          cursor = {
-            name: p1,
-            styles: p2,
-            next: cursor
-          }
-          return p1
-        })
-      }
-    }
   }
 
   if (
@@ -133,29 +115,7 @@ function handleInterpolation(
       return ''
     }
     case 'object': {
-      if (interpolation.anim === 1) {
-        cursor = {
-          name: interpolation.name,
-          styles: interpolation.styles,
-          next: cursor
-        }
-
-        return interpolation.name
-      }
       if (interpolation.styles !== undefined) {
-        let next = interpolation.next
-        if (next !== undefined) {
-          // not the most efficient thing ever but this is a pretty rare case
-          // and there will be very few iterations of this generally
-          while (next !== undefined) {
-            cursor = {
-              name: next.name,
-              styles: next.styles,
-              next: cursor
-            }
-            next = next.next
-          }
-        }
         let styles = interpolation.styles
         if (
           process.env.NODE_ENV !== 'production' &&
@@ -171,14 +131,10 @@ function handleInterpolation(
     }
     case 'function': {
       if (mergedProps !== undefined) {
-        let previousCursor = cursor
-        let result = interpolation(mergedProps)
-        cursor = previousCursor
-
         return handleInterpolation(
           mergedProps,
           registered,
-          result,
+          interpolation(mergedProps),
           couldBeSelectorInterpolation
         )
       } else if (process.env.NODE_ENV !== 'production') {
@@ -279,10 +235,6 @@ if (process.env.NODE_ENV !== 'production') {
   sourceMapPattern = /\/\*#\ssourceMappingURL=data:application\/json;\S+\s+\*\//
 }
 
-// this is the cursor for keyframes
-// keyframes are stored on the SerializedStyles object as a linked list
-let cursor
-
 export const serializeStyles = function(
   args: Array<Interpolation>,
   registered: RegisteredCache | void,
@@ -299,7 +251,6 @@ export const serializeStyles = function(
   let stringMode = true
   let styles = ''
 
-  cursor = undefined
   let strings = args[0]
   if (strings == null || strings.raw === undefined) {
     stringMode = false
@@ -347,13 +298,11 @@ export const serializeStyles = function(
     return {
       name,
       styles,
-      map: sourceMap,
-      next: cursor
+      map: sourceMap
     }
   }
   return {
     name,
-    styles,
-    next: cursor
+    styles
   }
 }

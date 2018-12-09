@@ -42,6 +42,8 @@ let getServerStylisCache = isBrowser
       }
     })
 
+let animationRegex = /_EMO_([^_]+?)_([^]*?)_EMO_/g
+
 let createCache = (options?: Options): EmotionCache => {
   if (options === undefined) options = {}
   let key = options.key || 'css'
@@ -92,7 +94,16 @@ let createCache = (options?: Options): EmotionCache => {
 
   if (isBrowser) {
     stylis.use(options.stylisPlugins)(ruleSheet)
-
+    let insertAnimations = (match, name, styles) => {
+      insert(
+        '',
+        { name, styles },
+        // $FlowFixMe
+        Sheet.current,
+        true
+      )
+      return name
+    }
     insert = (
       selector: string,
       serialized: SerializedStyles,
@@ -112,7 +123,10 @@ let createCache = (options?: Options): EmotionCache => {
           }
         }
       }
-      stylis(selector, serialized.styles)
+      stylis(
+        selector,
+        serialized.styles.replace(animationRegex, insertAnimations)
+      )
       if (shouldCache) {
         cache.inserted[name] = true
       }
@@ -127,10 +141,36 @@ let createCache = (options?: Options): EmotionCache => {
         options.stylisPlugins || rootServerStylisCache
       )(options.prefix)
     }
-    let getRules = (selector: string, serialized: SerializedStyles): string => {
+    let getRules = (
+      selector: string,
+      serialized: SerializedStyles
+    ): { name: string, styles: string } => {
       let name = serialized.name
+
       if (serverStylisCache[name] === undefined) {
-        serverStylisCache[name] = stylis(selector, serialized.styles)
+        let keyframeStyles = ''
+        let names = name
+        let insertAnimations = (match, name, rawStyles) => {
+          let styles = insert(
+            '',
+            { name, styles: rawStyles },
+            // $FlowFixMe
+            Sheet.current,
+            true
+          )
+          if (styles !== undefined) {
+            keyframeStyles += styles
+          }
+          names += ' ' + name
+
+          return name
+        }
+        let result = stylis(
+          selector,
+          serialized.styles.replace(animationRegex, insertAnimations)
+        )
+
+        serverStylisCache[name] = { names, styles: keyframeStyles + result }
       }
       return serverStylisCache[name]
     }
@@ -141,6 +181,7 @@ let createCache = (options?: Options): EmotionCache => {
       shouldCache: boolean
     ): string | void => {
       let name = serialized.name
+
       let rules = getRules(selector, serialized)
       if (cache.compat === undefined) {
         // in regular mode, we don't set the styles on the inserted cache
