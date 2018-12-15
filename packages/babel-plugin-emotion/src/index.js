@@ -5,6 +5,7 @@ import cssMacro, { transformCssCallExpression } from './css-macro'
 import { addDefault } from '@babel/helper-module-imports'
 import nodePath from 'path'
 import { getSourceMap, getStyledOptions } from './utils'
+import coreMacro from './core-macro'
 
 let webStyledMacro = createStyledMacro({
   importPath: '@emotion/styled-base',
@@ -25,7 +26,8 @@ let primitivesStyledMacro = createStyledMacro({
 export const macros = {
   createEmotionMacro,
   css: cssMacro,
-  createStyledMacro
+  createStyledMacro,
+  core: coreMacro
 }
 
 export type BabelPath = any
