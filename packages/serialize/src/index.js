@@ -351,7 +351,14 @@ export const serializeStyles = function(
       name,
       styles,
       map: sourceMap,
-      next: cursor
+      next: cursor,
+      toString() {
+        console.error(
+          "You have tried to stringify object returned from `css` function. It isn't supposed to be used directly (i.e. as value of the `className` prop), but rather handed to emotion so it can handle it (i.e. as value of `css` prop)."
+        )
+        // return default string representation of an object
+        return String({})
+      }
     }
   }
   return {
